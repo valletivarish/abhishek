@@ -1,0 +1,10 @@
+# S3 Ingestion Performance Experiment
+# 
+# Note: boto3 is provided by the AWS Lambda runtime environment
+# and does not need to be included in the deployment package.
+#
+# For local development and testing, install with:
+# pip install boto3 pandas
+
+# boto3>=1.26.0  # Uncomment for local development
+# pandas>=1.5.0  # Uncomment for local development and results analysis
