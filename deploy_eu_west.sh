@@ -1,45 +1,45 @@
 #!/bin/bash
 
-# Lambda S3 Experiment - EU West 1 Deployment
-echo "========================================"
-echo "Lambda S3 Experiment - EU West 1 Deployment"
-echo "========================================"
-
-echo
-echo "Step 1: Destroying any existing infrastructure..."
 cd infra
-terraform destroy -auto-approve
+echo "Deleting existing Lambda functions..."
+aws lambda list-functions --region eu-west-1 --query 'Functions[?starts_with(FunctionName, `ingest-`)].FunctionName' --output text | tr '\t' '\n' | while read func_name; do
+    if [ ! -z "$func_name" ]; then
+        echo "Deleting function: $func_name"
+        aws lambda delete-function --function-name "$func_name" --region eu-west-1
+    fi
+done
 
-echo
-echo "Step 2: Initializing Terraform..."
+echo "Deleting existing S3 bucket..."
+aws s3 ls | grep lambda-s3-exp-lab-20251027 | awk '{print $3}' | while read bucket_name; do
+    if [ ! -z "$bucket_name" ]; then
+        echo "Deleting bucket: $bucket_name"
+        aws s3 rb "s3://$bucket_name" --force
+    fi
+done
+
+echo "Deleting existing CloudWatch log groups..."
+aws logs describe-log-groups --region eu-west-1 --log-group-name-prefix "/aws/lambda/ingest-" --query 'logGroups[].logGroupName' --output text | tr '\t' '\n' | while read log_group; do
+    if [ ! -z "$log_group" ]; then
+        echo "Deleting log group: $log_group"
+        aws logs delete-log-group --log-group-name "$log_group" --region eu-west-1
+    fi
+done
+
+echo "Cleaning up Terraform state..."
+rm -f terraform.tfstate terraform.tfstate.backup .terraform.tfstate.lock.info
+rm -rf .terraform
+
 terraform init
-
-echo
-echo "Step 3: Planning deployment..."
+echo "Planning deployment..."
 terraform plan
-
-echo
-echo "Step 4: Applying deployment..."
+echo "Applying deployment..."
 terraform apply -auto-approve
 
 if [ $? -eq 0 ]; then
-    echo
     echo "SUCCESS: Deployment complete!"
-    echo
-    echo "S3 Bucket:"
     terraform output output_bucket_name
-    echo
-    echo "Total Functions:"
     terraform output total_function_count
-    echo
-    echo "All Function ARNs:"
     terraform output all_function_arns
-    echo
-    echo "Ready for experimentation!"
-    echo
-    echo "Run experiments with:"
-    echo "python -m runner.experiment_runner --function-prefix 'ingest-events-' --invocations 3000 --trials 3"
-    echo "python -m runner.experiment_runner --function-prefix 'ingest-batch-' --invocations 350 --trials 3"
 else
     echo "ERROR: Deployment failed!"
     exit 1

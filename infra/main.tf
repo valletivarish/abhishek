@@ -135,7 +135,7 @@ resource "aws_cloudwatch_log_group" "events" {
   }
 }
 
-# Batch workload Lambda functions (27 functions)
+# Batch workload Lambda functions (27 functions) - DEPENDS ON EVENTS COMPLETION
 resource "aws_lambda_function" "batch" {
   for_each = local.batch_map
 
@@ -151,6 +151,9 @@ resource "aws_lambda_function" "batch" {
   timeout     = 900  # 15 minutes for large uploads
   
   reserved_concurrent_executions = each.value.rc > 0 ? each.value.rc : null
+
+  # Wait for ALL events functions to complete before creating batch functions
+  depends_on = [aws_lambda_function.events]
 
   environment {
     variables = {
@@ -175,7 +178,7 @@ resource "aws_lambda_function" "batch" {
   }
 }
 
-# CloudWatch log group for batch functions
+# CloudWatch log group for batch functions - DEPENDS ON BATCH FUNCTIONS
 resource "aws_cloudwatch_log_group" "batch" {
   for_each = local.batch_map
 
