@@ -121,6 +121,20 @@ resource "aws_lambda_function" "events" {
   }
 }
 
+# CloudWatch log group for events functions
+resource "aws_cloudwatch_log_group" "events" {
+  for_each = local.events_map
+
+  name              = "/aws/lambda/${aws_lambda_function.events[each.key].function_name}"
+  retention_in_days = 7
+
+  tags = {
+    project = var.project_name
+    workload = "events"
+    env     = var.environment
+  }
+}
+
 # Batch workload Lambda functions (27 functions)
 resource "aws_lambda_function" "batch" {
   for_each = local.batch_map
@@ -158,5 +172,19 @@ resource "aws_lambda_function" "batch" {
     batch_or_part = tostring(each.value.part)
     rc           = tostring(each.value.rc)
     env          = var.environment
+  }
+}
+
+# CloudWatch log group for batch functions
+resource "aws_cloudwatch_log_group" "batch" {
+  for_each = local.batch_map
+
+  name              = "/aws/lambda/${aws_lambda_function.batch[each.key].function_name}"
+  retention_in_days = 7
+
+  tags = {
+    project = var.project_name
+    workload = "batch"
+    env     = var.environment
   }
 }

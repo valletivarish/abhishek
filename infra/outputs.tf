@@ -50,3 +50,18 @@ output "experiment_runner_commands" {
     batch  = "python -m runner.experiment_runner --function-prefix 'ingest-batch-' --invocations 20 --trials 5 --execute-queries"
   }
 }
+
+output "events_function_arns" {
+  description = "List of events workload Lambda function ARNs"
+  value       = sort([for func in aws_lambda_function.events : func.arn])
+}
+
+output "batch_function_arns" {
+  description = "List of batch workload Lambda function ARNs"
+  value       = sort([for func in aws_lambda_function.batch : func.arn])
+}
+
+output "all_function_arns" {
+  description = "List of all Lambda function ARNs"
+  value       = sort(concat([for func in aws_lambda_function.events : func.arn], [for func in aws_lambda_function.batch : func.arn]))
+}

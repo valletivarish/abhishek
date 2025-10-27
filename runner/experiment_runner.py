@@ -285,9 +285,9 @@ def main():
     """Main entry point for the experiment runner."""
     parser = argparse.ArgumentParser(description='Run S3 ingestion performance experiments')
     parser.add_argument('--function-prefix', required=True, help='Lambda function name prefix')
-    parser.add_argument('--invocations', type=int, default=50, help='Invocations per trial')
+    parser.add_argument('--invocations', type=int, default=3000, help='Invocations per trial')
     parser.add_argument('--trials', type=int, default=5, help='Number of trials per function')
-    parser.add_argument('--region', default='us-east-1', help='AWS region')
+    parser.add_argument('--region', default='eu-west-1', help='AWS region')
     parser.add_argument('--execute-queries', action='store_true', help='Execute Logs Insights queries')
     parser.add_argument('--output', default='experiment_results.csv', help='Output CSV filename')
     
