@@ -5,7 +5,7 @@
 
 set -e  # Exit on any error
 
-echo "🚀 Starting Lambda S3 Experiment Infrastructure Deployment"
+echo "Starting Lambda S3 Experiment Infrastructure Deployment"
 
 # Colors for output
 RED='\033[0;31m'
@@ -135,4 +135,4 @@ echo ""
 echo "3. Monitor CloudWatch logs for each function"
 echo "4. Check S3 bucket for experiment outputs"
 
-print_success "Deployment complete! 🎉"
+print_success "Deployment complete!"

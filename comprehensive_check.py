@@ -12,17 +12,17 @@ from pathlib import Path
 
 def print_header(title):
     print(f"\n{'='*60}")
-    print(f"🔍 {title}")
+    print(f"[CHECK] {title}")
     print(f"{'='*60}")
 
 def print_success(msg):
-    print(f"✅ {msg}")
+    print(f"[SUCCESS] {msg}")
 
 def print_error(msg):
-    print(f"❌ {msg}")
+    print(f"[ERROR] {msg}")
 
 def print_warning(msg):
-    print(f"⚠️  {msg}")
+    print(f"[WARNING] {msg}")
 
 def check_file_exists(filepath, description):
     """Check if a file exists and is readable."""
@@ -278,13 +278,13 @@ def main():
     print_header("Final Result")
     if all_checks_passed:
         print_success("ALL CHECKS PASSED! Ready for deployment.")
-        print("\n🚀 Next steps:")
+        print("\n[INFO] Next steps:")
         print("1. cd infra")
         print("2. terraform apply -auto-approve")
         print("3. Test one function: aws lambda invoke --function-name ingest-events-m512-b1-rc0 --region eu-west-1 --payload '{}' response.json")
     else:
         print_error("SOME CHECKS FAILED! Fix issues before deployment.")
-        print("\n🔧 Check the errors above and fix them first.")
+        print("\n[INFO] Check the errors above and fix them first.")
     
     return all_checks_passed
 
