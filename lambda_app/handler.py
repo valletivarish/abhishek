@@ -9,19 +9,12 @@ import time
 # Add current directory to path for local testing
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-try:
-    from .settings import Settings
-    from .generators import make_event_payload, make_large_object, aggregate_events
-    from .s3_uploader import put_single_object, multipart_upload_stream, calculate_multipart_stats
-    from .metrics import now_ms, print_emf, create_invocation_metrics
-    from .util import random_key, get_region, get_run_id, get_function_name
-except ImportError:
-    # Fallback for local testing
-    from settings import Settings
-    from generators import make_event_payload, make_large_object, aggregate_events
-    from s3_uploader import put_single_object, multipart_upload_stream, calculate_multipart_stats
-    from metrics import now_ms, print_emf, create_invocation_metrics
-    from util import random_key, get_region, get_run_id, get_function_name
+# Import modules - Lambda uses absolute imports
+from settings import Settings
+from generators import make_event_payload, make_large_object, aggregate_events
+from s3_uploader import put_single_object, multipart_upload_stream, calculate_multipart_stats
+from metrics import now_ms, print_emf, create_invocation_metrics
+from util import random_key, get_region, get_run_id, get_function_name
 
 
 def handler(event, context):
