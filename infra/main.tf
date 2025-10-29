@@ -19,6 +19,12 @@ provider "aws" {
 # Get current AWS account ID for role ARN construction
 data "aws_caller_identity" "current" {}
 
+# AWS Lambda Insights layer ARN for eu-west-1
+# Using the standard ARN format for Lambda Insights
+locals {
+  lambda_insights_layer_arn = "arn:aws:lambda:${var.region}:580247275435:layer:LambdaInsightsExtension:27"
+}
+
 # Package Lambda code
 data "archive_file" "lambda_zip" {
   type        = "zip"
@@ -98,6 +104,9 @@ resource "aws_lambda_function" "events" {
   
   reserved_concurrent_executions = each.value.rc > 0 ? each.value.rc : null
 
+  # Add Lambda Insights layer for enhanced metrics
+  layers = [local.lambda_insights_layer_arn]
+
   environment {
     variables = {
       WORKLOAD           = "events"
@@ -151,6 +160,9 @@ resource "aws_lambda_function" "batch" {
   timeout     = 900  # 15 minutes for large uploads
   
   reserved_concurrent_executions = each.value.rc > 0 ? each.value.rc : null
+
+  # Add Lambda Insights layer for enhanced metrics
+  layers = [local.lambda_insights_layer_arn]
 
   # Wait for ALL events functions to complete before creating batch functions
   depends_on = [aws_lambda_function.events]

@@ -33,7 +33,8 @@ def emf_log(**fields: Any) -> str:
                     "Metrics": [
                         {"Name": "latency_ms", "Unit": "Milliseconds"},
                         {"Name": "object_bytes", "Unit": "Bytes"},
-                        {"Name": "events_generated", "Unit": "Count"}
+                        {"Name": "events_generated", "Unit": "Count"},
+                        {"Name": "cold_start_ms", "Unit": "Milliseconds"}
                     ]
                 }
             ],
@@ -72,7 +73,9 @@ def create_invocation_metrics(
     multipart_part_mb: int,
     multipart_parts: int,
     s3_bucket: str,
-    s3_key: str
+    s3_key: str,
+    is_cold_start: bool = False,
+    cold_start_ms: int = 0
 ) -> Dict[str, Any]:
     """
     Create a complete set of invocation metrics.
@@ -97,5 +100,7 @@ def create_invocation_metrics(
         'multipart_part_mb': multipart_part_mb,
         'multipart_parts': multipart_parts,
         's3_bucket': s3_bucket,
-        's3_key': s3_key
+        's3_key': s3_key,
+        'is_cold_start': is_cold_start,
+        'cold_start_ms': cold_start_ms
     }

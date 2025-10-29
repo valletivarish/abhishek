@@ -16,6 +16,9 @@ from s3_uploader import put_single_object, multipart_upload_stream, calculate_mu
 from metrics import now_ms, print_emf, create_invocation_metrics
 from util import random_key, get_region, get_run_id, get_function_name
 
+# Capture cold start timing at module load time
+COLD_START_BEGAN_MS = int(time.time() * 1000)
+
 
 def handler(event, context):
     """
@@ -28,7 +31,18 @@ def handler(event, context):
     Returns:
         JSON response with execution details
     """
+    # Debug: Test if logging works at all
+    print("DEBUG: Handler started")
+    
     ts_start_ms = now_ms()
+    
+    # Detect cold start with more accurate timing
+    is_cold_start = not hasattr(handler, '_initialized')
+    if is_cold_start:
+        handler._initialized = True
+        cold_start_ms = ts_start_ms - COLD_START_BEGAN_MS
+    else:
+        cold_start_ms = 0
     
     try:
         # Load settings from environment
@@ -111,11 +125,20 @@ def handler(event, context):
             multipart_part_mb=multipart_part_mb,
             multipart_parts=multipart_parts,
             s3_bucket=settings.output_bucket,
-            s3_key=s3_key
+            s3_key=s3_key,
+            is_cold_start=is_cold_start,
+            cold_start_ms=cold_start_ms
         )
+        
+        # Debug: Test if we reach EMF logging
+        print("DEBUG: About to log EMF metrics")
         
         # Log metrics as EMF
         print_emf(**metrics)
+        
+        # Debug: Also print to stderr for immediate visibility
+        import sys
+        print(f"DEBUG: EMF logged - cold_start_ms: {cold_start_ms}, is_cold_start: {is_cold_start}", file=sys.stderr)
         
         # Return success response
         return {
@@ -147,12 +170,18 @@ def handler(event, context):
             multipart_part_mb=0,
             multipart_parts=0,
             s3_bucket=getattr(settings, 'output_bucket', ''),
-            s3_key=''
+            s3_key='',
+            is_cold_start=is_cold_start,
+            cold_start_ms=cold_start_ms
         )
         
         # Add error information
         error_metrics['error'] = str(e)
         print_emf(**error_metrics)
+        
+        # Debug: Also print to stderr for immediate visibility
+        import sys
+        print(f"DEBUG: Error EMF logged - cold_start_ms: {cold_start_ms}, is_cold_start: {is_cold_start}", file=sys.stderr)
         
         # Re-raise the exception
         raise e

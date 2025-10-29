@@ -151,19 +151,18 @@ class ExperimentRunner:
         
         return experiment_results
     
-    def save_results_csv(self, results: Dict[str, List[List[Dict[str, Any]]]], filename: str, execute_queries: bool = False):
+    def save_results_csv(self, results: Dict[str, List[List[Dict[str, Any]]]], filename: str):
         """
-        Save experiment results to CSV file.
+        Save basic experiment results to CSV file.
         
         Args:
             results: Experiment results
             filename: Output CSV filename
-            execute_queries: Whether to execute Logs Insights queries
         """
         with open(filename, 'w', newline='') as csvfile:
             fieldnames = [
-                'workload', 'memory_mb', 'batch_or_multipart', 'reserved_concurrency',
-                'run_id', 'p95_ms', 'throughput_obj_per_s', 'bytes_sum'
+                'function_name', 'trial', 'invocation', 'run_id', 'ok', 'latency_ms', 
+                's3_key', 'object_bytes', 'events_generated', 'multipart_parts'
             ]
             
             writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
@@ -171,114 +170,24 @@ class ExperimentRunner:
             
             for function_name, function_results in results.items():
                 for trial_idx, trial_results in enumerate(function_results):
-                    # Get run_id from first invocation
-                    if trial_results:
-                        run_id = trial_results[0].get('run_id', '')
-                        
-                        if execute_queries and run_id:
-                            # Execute Logs Insights query
-                            log_group = f"/aws/lambda/{function_name}"
-                            query = self.get_logs_insights_query(log_group, run_id)
-                            query_results = self.execute_logs_insights_query(log_group, query)
-                            
-                            if query_results:
-                                result = query_results[0]
-                                row = {
-                                    'workload': self.extract_workload_from_function_name(function_name),
-                                    'memory_mb': self.extract_memory_from_function_name(function_name),
-                                    'batch_or_multipart': self.extract_batch_or_multipart_from_function_name(function_name),
-                                    'reserved_concurrency': self.extract_concurrency_from_function_name(function_name),
-                                    'run_id': run_id,
-                                    'p95_ms': result.get('p95_ms', 0),
-                                    'throughput_obj_per_s': result.get('throughput_obj_per_s', 0),
-                                    'bytes_sum': result.get('bytes_sum', 0)
-                                }
-                                writer.writerow(row)
+                    for inv_idx, invocation in enumerate(trial_results):
+                        row = {
+                            'function_name': function_name,
+                            'trial': trial_idx + 1,
+                            'invocation': inv_idx + 1,
+                            'run_id': invocation.get('run_id', ''),
+                            'ok': invocation.get('ok', False),
+                            'latency_ms': invocation.get('latency_ms', 0),
+                            's3_key': invocation.get('s3_key', ''),
+                            'object_bytes': invocation.get('object_bytes', 0),
+                            'events_generated': invocation.get('events_generated', 0),
+                            'multipart_parts': invocation.get('multipart_parts', 0)
+                        }
+                        writer.writerow(row)
         
-        print(f"Results saved to {filename}")
+        print(f"Basic results saved to {filename}")
+        print("Detailed metrics are available in CloudWatch Logs and Metrics")
     
-    def get_logs_insights_query(self, log_group: str, run_id: str) -> str:
-        """Get the Logs Insights query for a run_id."""
-        from .logs_insights_queries import query_p95_latency_throughput
-        return query_p95_latency_throughput(log_group, run_id)
-    
-    def extract_workload_from_function_name(self, function_name: str) -> str:
-        """Extract workload type from function name."""
-        if 'events' in function_name.lower():
-            return 'events'
-        elif 'batch' in function_name.lower():
-            return 'batch'
-        return 'unknown'
-    
-    def extract_memory_from_function_name(self, function_name: str) -> int:
-        """Extract memory MB from function name."""
-        import re
-        match = re.search(r'(\d+)mb', function_name.lower())
-        return int(match.group(1)) if match else 0
-    
-    def extract_batch_or_multipart_from_function_name(self, function_name: str) -> str:
-        """Extract batch/multipart factor from function name."""
-        import re
-        if 'events' in function_name.lower():
-            # Look for batch events pattern
-            match = re.search(r'events[_-]?(\d+)', function_name.lower())
-            return match.group(1) if match else '1'
-        elif 'batch' in function_name.lower():
-            # Look for multipart size pattern
-            match = re.search(r'batch[_-]?(\d+)mb', function_name.lower())
-            return match.group(1) if match else '8'
-        return 'unknown'
-    
-    def extract_concurrency_from_function_name(self, function_name: str) -> int:
-        """Extract reserved concurrency from function name."""
-        import re
-        match = re.search(r'conc[_-]?(\d+)', function_name.lower())
-        return int(match.group(1)) if match else 0
-    
-    def execute_logs_insights_query(self, log_group: str, query: str) -> List[Dict[str, Any]]:
-        """
-        Execute a CloudWatch Logs Insights query.
-        
-        Args:
-            log_group: Log group name
-            query: Query string
-            
-        Returns:
-            Query results
-        """
-        try:
-            response = self.logs_client.start_query(
-                logGroupName=log_group,
-                startTime=int((time.time() - 3600) * 1000),  # Last hour
-                endTime=int(time.time() * 1000),
-                queryString=query
-            )
-            
-            query_id = response['queryId']
-            
-            # Wait for query to complete
-            while True:
-                result = self.logs_client.get_query_results(queryId=query_id)
-                if result['status'] == 'Complete':
-                    break
-                elif result['status'] == 'Failed':
-                    raise Exception(f"Query failed: {result.get('statusMessage', 'Unknown error')}")
-                
-                time.sleep(1)
-            
-            # Parse results
-            results = []
-            for row in result.get('results', []):
-                row_dict = {}
-                for field in row:
-                    row_dict[field['field']] = field['value']
-                results.append(row_dict)
-            
-            return results
-            
-        except ClientError as e:
-            print(f"Error executing query: {e}")
-            return []
 
 
 def main():
@@ -288,7 +197,6 @@ def main():
     parser.add_argument('--invocations', type=int, default=3000, help='Invocations per trial')
     parser.add_argument('--trials', type=int, default=5, help='Number of trials per function')
     parser.add_argument('--region', default='eu-west-1', help='AWS region')
-    parser.add_argument('--execute-queries', action='store_true', help='Execute Logs Insights queries')
     parser.add_argument('--output', default='experiment_results.csv', help='Output CSV filename')
     
     args = parser.parse_args()
@@ -310,10 +218,11 @@ def main():
         timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
         filename = f"results_{args.function_prefix.replace('-', '_').rstrip('_')}_{timestamp}.csv"
         
-        # Save results with Logs Insights integration
-        runner.save_results_csv(results, filename, execute_queries=args.execute_queries)
+        # Save basic results
+        runner.save_results_csv(results, filename)
     
     print("Experiment completed!")
+    print("Check CloudWatch Logs and Metrics for detailed performance data")
 
 
 if __name__ == '__main__':
