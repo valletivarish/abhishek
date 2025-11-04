@@ -10,7 +10,7 @@ aws lambda list-functions --region eu-west-1 --query 'Functions[?starts_with(Fun
 done
 
 echo "Deleting existing S3 bucket..."
-aws s3 ls | grep lambda-s3-exp-lab-20251027 | awk '{print $3}' | while read bucket_name; do
+aws s3 ls | grep lambda-s3-exp-lab-23102002-789456 | awk '{print $3}' | while read bucket_name; do
     if [ ! -z "$bucket_name" ]; then
         echo "Deleting bucket: $bucket_name"
         aws s3 rb "s3://$bucket_name" --force
